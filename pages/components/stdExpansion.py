@@ -55,6 +55,22 @@ def apply_std_expansion(
     df["STD_Mike"] = np.nan
     df.loc[valid, "STD_Mike"] = (df.loc[valid, "STD_Ratio"] - 1.0) * 100.0
 
+
+    # 5) Tenkan & Kijun on STD-Mike
+    df["STD_Tenkan"] = np.nan
+    df["STD_Kijun"] = np.nan
+
+    if df["STD_Mike"].notna().any():
+        # Tenkan = midpoint of highest/lowest STD_Mike over last 9 bars
+        high_9 = df["STD_Mike"].rolling(window=9, min_periods=1).max()
+        low_9 = df["STD_Mike"].rolling(window=9, min_periods=1).min()
+        df["STD_Tenkan"] = (high_9 + low_9) / 2.0
+
+        # Kijun = midpoint of highest/lowest STD_Mike over last 26 bars
+        high_26 = df["STD_Mike"].rolling(window=26, min_periods=1).max()
+        low_26 = df["STD_Mike"].rolling(window=26, min_periods=1).min()
+        df["STD_Kijun"] = (high_26 + low_26) / 2.0
+
     return df
 
 
@@ -83,29 +99,20 @@ def render_std_component(df: pd.DataFrame, ticker: str):
         delta=last_alert,
     )
 
-    # 5) Tenkan & Kijun for STD-Mike
-    df["STD_Tenkan"] = (
-        df["STD_Mike"]
-        .rolling(window=9, min_periods=1)
-        .apply(lambda x: (np.nanmax(x) + np.nanmin(x)) / 2, raw=False)
-    )
-
-    df["STD_Kijun"] = (
-        df["STD_Mike"]
-        .rolling(window=26, min_periods=1)
-        .apply(lambda x: (np.nanmax(x) + np.nanmin(x)) / 2, raw=False)
-    )
 
 
     st.divider()
 
-    # --- Normalized STD-Mike line plot (Time in hover via text) ---
+        # --- Normalized STD-Mike line plot (Time on hover via Plotly) ---
     if "STD_Mike" not in df.columns or "Time" not in df.columns:
         st.info("No normalized STD-Mike series available.")
         return
 
-    plot_df = df[["Time", "STD_Mike"]].copy()
-    plot_df = plot_df.replace([np.inf, -np.inf], np.nan).dropna(subset=["STD_Mike"])
+    plot_df = df[["Time", "STD_Mike", "STD_Tenkan", "STD_Kijun"]].copy()
+    plot_df = plot_df.replace([np.inf, -np.inf], np.nan)
+
+    # Drop rows where STD_Mike is NaN
+    plot_df = plot_df.dropna(subset=["STD_Mike"])
 
     if plot_df.empty:
         st.info("Not enough data to plot normalized STD-Mike.")
@@ -113,63 +120,60 @@ def render_std_component(df: pd.DataFrame, ticker: str):
 
     st.markdown("**Normalized STD-Mike (Volatility Path)**")
 
-    # Use a simple numeric x, and store Time in `text` for hover
-    plot_df = plot_df.reset_index(drop=True)
-    x_vals = plot_df.index
-    time_labels = plot_df["Time"].astype(str)
-
     fig = go.Figure()
 
-
-    fig.add_trace(
-    go.Scatter(
-        x=plot_df.index,
-        y=plot_df["STD_Tenkan"],
-        mode="lines",
-        name="STD Tenkan",
-        line=dict(color="red", width=1),
-        hovertemplate="Time: %{text}<br>Tenkan: %{y:.2f}<extra></extra>",
-        text=time_labels
-    )
-)
-
+    # Main STD-Mike line
     fig.add_trace(
         go.Scatter(
-            x=plot_df.index,
-            y=plot_df["STD_Kijun"],
-            mode="lines",
-            name="STD Kijun",
-            line=dict(color="blue", width=1),
-            hovertemplate="Time: %{text}<br>Kijun: %{y:.2f}<extra></extra>",
-            text=time_labels
-        )
-    )
-
-
-    fig.add_trace(
-        go.Scatter(
-            x=x_vals,
+            x=plot_df["Time"],
             y=plot_df["STD_Mike"],
             mode="lines",
             name="STD-Mike",
-            text=time_labels,  # <- used in hover
             hovertemplate=(
-                "Time: %{text}<br>"
+                "Time: %{x}<br>"
                 "STD-Mike: %{y:.2f}"
                 "<extra></extra>"
             ),
         )
     )
 
-    # Show a few time labels along the x-axis for orientation
-    if len(x_vals) > 1:
-        step = max(len(x_vals) // 6, 1)
-        fig.update_xaxes(
-            tickmode="array",
-            tickvals=x_vals[::step],
-            ticktext=time_labels[::step],
-            title="Time",
-        )
+    # Tenkan on STD-Mike (if present)
+    if "STD_Tenkan" in plot_df.columns:
+        tenkan_df = plot_df.dropna(subset=["STD_Tenkan"])
+        if not tenkan_df.empty:
+            fig.add_trace(
+                go.Scatter(
+                    x=tenkan_df["Time"],
+                    y=tenkan_df["STD_Tenkan"],
+                    mode="lines",
+                    name="STD Tenkan",
+                    line=dict(width=1, dash="dot"),
+                    hovertemplate=(
+                        "Time: %{x}<br>"
+                        "STD Tenkan: %{y:.2f}"
+                        "<extra></extra>"
+                    ),
+                )
+            )
+
+    # Kijun on STD-Mike (if present)
+    if "STD_Kijun" in plot_df.columns:
+        kijun_df = plot_df.dropna(subset=["STD_Kijun"])
+        if not kijun_df.empty:
+            fig.add_trace(
+                go.Scatter(
+                    x=kijun_df["Time"],
+                    y=kijun_df["STD_Kijun"],
+                    mode="lines",
+                    name="STD Kijun",
+                    line=dict(width=1, dash="dash"),
+                    hovertemplate=(
+                        "Time: %{x}<br>"
+                        "STD Kijun: %{y:.2f}"
+                        "<extra></extra>"
+                    ),
+                )
+            )
 
     fig.update_layout(
         height=220,
