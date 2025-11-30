@@ -108,10 +108,9 @@ def render_std_component(df: pd.DataFrame, ticker: str):
     else:
         st.info("Not enough data to build STD ratio histogram.")
 
-    st.divider()
+        st.divider()
 
-
-    # --- Normalized STD-Mike line plot (Time on hover via Plotly) ---
+    # --- Normalized STD-Mike line plot (Time in hover via text) ---
     if "STD_Mike" not in df.columns or "Time" not in df.columns:
         st.info("No normalized STD-Mike series available.")
         return
@@ -125,20 +124,36 @@ def render_std_component(df: pd.DataFrame, ticker: str):
 
     st.markdown("**Normalized STD-Mike (Volatility Path)**")
 
+    # Use a simple numeric x, and store Time in `text` for hover
+    plot_df = plot_df.reset_index(drop=True)
+    x_vals = plot_df.index
+    time_labels = plot_df["Time"].astype(str)
+
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
-            x=plot_df["Time"],
+            x=x_vals,
             y=plot_df["STD_Mike"],
             mode="lines",
             name="STD-Mike",
+            text=time_labels,  # <- used in hover
             hovertemplate=(
-                "Time: %{x}<br>"
+                "Time: %{text}<br>"
                 "STD-Mike: %{y:.2f}"
                 "<extra></extra>"
             ),
         )
     )
+
+    # Show a few time labels along the x-axis for orientation
+    if len(x_vals) > 1:
+        step = max(len(x_vals) // 6, 1)
+        fig.update_xaxes(
+            tickmode="array",
+            tickvals=x_vals[::step],
+            ticktext=time_labels[::step],
+            title="Time",
+        )
 
     fig.update_layout(
         height=220,
