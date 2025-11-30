@@ -83,6 +83,20 @@ def render_std_component(df: pd.DataFrame, ticker: str):
         delta=last_alert,
     )
 
+    # 5) Tenkan & Kijun for STD-Mike
+    df["STD_Tenkan"] = (
+        df["STD_Mike"]
+        .rolling(window=9, min_periods=1)
+        .apply(lambda x: (np.nanmax(x) + np.nanmin(x)) / 2, raw=False)
+    )
+
+    df["STD_Kijun"] = (
+        df["STD_Mike"]
+        .rolling(window=26, min_periods=1)
+        .apply(lambda x: (np.nanmax(x) + np.nanmin(x)) / 2, raw=False)
+    )
+
+
     st.divider()
 
     # --- Normalized STD-Mike line plot (Time in hover via text) ---
@@ -105,6 +119,33 @@ def render_std_component(df: pd.DataFrame, ticker: str):
     time_labels = plot_df["Time"].astype(str)
 
     fig = go.Figure()
+
+
+    fig.add_trace(
+    go.Scatter(
+        x=plot_df.index,
+        y=plot_df["STD_Tenkan"],
+        mode="lines",
+        name="STD Tenkan",
+        line=dict(color="red", width=1),
+        hovertemplate="Time: %{text}<br>Tenkan: %{y:.2f}<extra></extra>",
+        text=time_labels
+    )
+)
+
+    fig.add_trace(
+        go.Scatter(
+            x=plot_df.index,
+            y=plot_df["STD_Kijun"],
+            mode="lines",
+            name="STD Kijun",
+            line=dict(color="blue", width=1),
+            hovertemplate="Time: %{text}<br>Kijun: %{y:.2f}<extra></extra>",
+            text=time_labels
+        )
+    )
+
+
     fig.add_trace(
         go.Scatter(
             x=x_vals,
