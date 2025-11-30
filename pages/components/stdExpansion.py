@@ -159,7 +159,7 @@ def render_std_component(df: pd.DataFrame, ticker: str):
                     y=bb_df["STD_BB_Upper"],
                     mode="lines",
                     name="STD BB Upper",
-                    line=dict(width=1, dash="line", color="gray"),
+                    line=dict(width=1, dash="lines", color="gray"),
                     hovertemplate="Time: %{x}<br>STD BB Upper: %{y:.2f}<extra></extra>",
                 )
             )
@@ -171,7 +171,7 @@ def render_std_component(df: pd.DataFrame, ticker: str):
                     y=bb_df["STD_BB_Lower"],
                     mode="lines",
                     name="STD BB Lower",
-                    line=dict(width=1, dash="line",color="gray"),
+                    line=dict(width=1, dash="lines",color="gray"),
                     hovertemplate="Time: %{x}<br>STD BB Lower: %{y:.2f}<extra></extra>",
                 )
             )
