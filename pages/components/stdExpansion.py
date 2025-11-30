@@ -147,7 +147,7 @@ def render_std_component(df: pd.DataFrame, ticker: str):
                     y=tenkan_df["STD_Tenkan"],
                     mode="lines",
                     name="STD Tenkan",
-                    line=dict(width=1, dash="dot"),
+                    line=dict(width=1, dash="dot", color="red"),
                     hovertemplate=(
                         "Time: %{x}<br>"
                         "STD Tenkan: %{y:.2f}"
@@ -166,7 +166,7 @@ def render_std_component(df: pd.DataFrame, ticker: str):
                     y=kijun_df["STD_Kijun"],
                     mode="lines",
                     name="STD Kijun",
-                    line=dict(width=1, dash="dash"),
+                    line=dict(width=1, dash="dash", color="green"),
                     hovertemplate=(
                         "Time: %{x}<br>"
                         "STD Kijun: %{y:.2f}"
