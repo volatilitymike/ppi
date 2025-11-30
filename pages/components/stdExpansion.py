@@ -56,6 +56,16 @@ def apply_std_expansion(
     df.loc[valid, "STD_Mike"] = (df.loc[valid, "STD_Ratio"] - 1.0) * 100.0
 
 
+    # 5) Bollinger Bands on STD-Mike
+    bb_window = 20      # you can tweak this
+    bb_mult = 2.0       # standard 2σ bands
+
+    roll_mean = df["STD_Mike"].rolling(window=bb_window, min_periods=5).mean()
+    roll_std  = df["STD_Mike"].rolling(window=bb_window, min_periods=5).std()
+
+    df["STD_BB_MA"]     = roll_mean
+    df["STD_BB_Upper"]  = roll_mean + bb_mult * roll_std
+    df["STD_BB_Lower"]  = roll_mean - bb_mult * roll_std
     # 5) Tenkan & Kijun on STD-Mike
     df["STD_Tenkan"] = np.nan
     df["STD_Kijun"] = np.nan
@@ -136,6 +146,47 @@ def render_std_component(df: pd.DataFrame, ticker: str):
             ),
         )
     )
+ # Bollinger on STD-Mike (if available)
+    if {"STD_BB_MA", "STD_BB_Upper", "STD_BB_Lower"}.issubset(df.columns):
+        bb_df = df[["Time", "STD_BB_MA", "STD_BB_Upper", "STD_BB_Lower"]].copy()
+        bb_df = bb_df.replace([np.inf, -np.inf], np.nan).dropna(subset=["STD_BB_MA"])
+
+        if not bb_df.empty:
+            # Upper band
+            fig.add_trace(
+                go.Scatter(
+                    x=bb_df["Time"],
+                    y=bb_df["STD_BB_Upper"],
+                    mode="lines",
+                    name="STD BB Upper",
+                    line=dict(width=1, dash="dot"),
+                    hovertemplate="Time: %{x}<br>STD BB Upper: %{y:.2f}<extra></extra>",
+                )
+            )
+
+            # Lower band
+            fig.add_trace(
+                go.Scatter(
+                    x=bb_df["Time"],
+                    y=bb_df["STD_BB_Lower"],
+                    mode="lines",
+                    name="STD BB Lower",
+                    line=dict(width=1, dash="dot"),
+                    hovertemplate="Time: %{x}<br>STD BB Lower: %{y:.2f}<extra></extra>",
+                )
+            )
+
+            # Middle band (MA)
+            fig.add_trace(
+                go.Scatter(
+                    x=bb_df["Time"],
+                    y=bb_df["STD_BB_MA"],
+                    mode="lines",
+                    name="STD BB MA",
+                    line=dict(width=1.5, dash="dash"),
+                    hovertemplate="Time: %{x}<br>STD BB MA: %{y:.2f}<extra></extra>",
+                )
+            )
 
     # Tenkan on STD-Mike (if present)
     if "STD_Tenkan" in plot_df.columns:
