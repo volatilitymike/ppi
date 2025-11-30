@@ -58,106 +58,47 @@ def apply_std_expansion(
     return df
 
 
+
+
 def render_std_component(df: pd.DataFrame, ticker: str):
-    """STD snapshot + histogram + normalized STD-Mike line plot."""
-    if df.empty or "STD_Ratio" not in df.columns:
-        st.info("No STD data available.")
-        return
+    """
+    Minimal STD panel turned into:
+    - Manual Implied Volatility selector
+    - Numeric input + slider
+    """
 
-    st.subheader(f"📊 {ticker} — STD Expansion Overview")
+    st.subheader(f"📊 {ticker} — Manual IV Input")
 
-    # --- Snapshot (last values) ---
-    last_std = float(df["F%_STD"].iloc[-1]) if "F%_STD" in df.columns else np.nan
-    last_anchor = float(df["STD_Anchor"].iloc[-1]) if "STD_Anchor" in df.columns else np.nan
-    last_ratio = float(df["STD_Ratio"].iloc[-1]) if "STD_Ratio" in df.columns else np.nan
-    last_level = df["STD_Level"].iloc[-1] if "STD_Level" in df.columns else np.nan
-    last_alert = df["STD_Alert"].iloc[-1] if "STD_Alert" in df.columns else ""
+    with st.expander("🎚️ Implied Volatility (Manual Entry)", expanded=False):
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("STD Now", f"{last_std:.2f}" if not np.isnan(last_std) else "—")
-    c2.metric("Anchor", f"{last_anchor:.2f}" if not np.isnan(last_anchor) else "—")
-    c3.metric("Ratio", f"{last_ratio:.2f}" if not np.isnan(last_ratio) else "—")
-    c4.metric(
-        "Level",
-        f"{last_level:.2f}x" if not np.isnan(last_level) else "—",
-        delta=last_alert,
-    )
-
-    st.divider()
-
-    # --- Histogram of STD_Ratio ---
-    clean_ratio = (
-        df["STD_Ratio"]
-        .replace([np.inf, -np.inf], np.nan)
-        .dropna()
-        if "STD_Ratio" in df.columns
-        else pd.Series(dtype=float)
-    )
-
-    if not clean_ratio.empty:
-        hist_vals, bins = np.histogram(clean_ratio, bins=10)
-
-        hist_df = pd.DataFrame(
-            {
-                "Bin": [f"{bins[i]:.2f} → {bins[i + 1]:.2f}" for i in range(len(hist_vals))],
-                "Count": hist_vals,
-            }
+        st.markdown(
+            """
+            Enter the **live IV you see on Robinhood** for this ticker.
+            This value becomes your intraday reference for energy, risk and momentum.
+            """
         )
 
-        st.bar_chart(hist_df, x="Bin", y="Count", height=220)
-    else:
-        st.info("Not enough data to build STD ratio histogram.")
-
-        st.divider()
-
-    # --- Normalized STD-Mike line plot (Time in hover via text) ---
-    if "STD_Mike" not in df.columns or "Time" not in df.columns:
-        st.info("No normalized STD-Mike series available.")
-        return
-
-    plot_df = df[["Time", "STD_Mike"]].copy()
-    plot_df = plot_df.replace([np.inf, -np.inf], np.nan).dropna(subset=["STD_Mike"])
-
-    if plot_df.empty:
-        st.info("Not enough data to plot normalized STD-Mike.")
-        return
-
-    st.markdown("**Normalized STD-Mike (Volatility Path)**")
-
-    # Use a simple numeric x, and store Time in `text` for hover
-    plot_df = plot_df.reset_index(drop=True)
-    x_vals = plot_df.index
-    time_labels = plot_df["Time"].astype(str)
-
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=x_vals,
-            y=plot_df["STD_Mike"],
-            mode="lines",
-            name="STD-Mike",
-            text=time_labels,  # <- used in hover
-            hovertemplate=(
-                "Time: %{text}<br>"
-                "STD-Mike: %{y:.2f}"
-                "<extra></extra>"
-            ),
-        )
-    )
-
-    # Show a few time labels along the x-axis for orientation
-    if len(x_vals) > 1:
-        step = max(len(x_vals) // 6, 1)
-        fig.update_xaxes(
-            tickmode="array",
-            tickvals=x_vals[::step],
-            ticktext=time_labels[::step],
-            title="Time",
+        # Numeric input + slider (linked)
+        iv_value = st.number_input(
+            "IV (from Robinhood)",
+            min_value=0.0,
+            max_value=300.0,
+            value=30.0,
+            step=1.0,
+            help="Type the exact IV shown in Robinhood (e.g., 28.5, 34, 42).",
+            key=f"iv_input_{ticker}"
         )
 
-    fig.update_layout(
-        height=220,
-        margin=dict(l=20, r=20, t=20, b=40),
-    )
+        iv_value = st.slider(
+            "Adjust IV",
+            min_value=0.0,
+            max_value=300.0,
+            value=float(iv_value),
+            step=1.0,
+            key=f"iv_slider_{ticker}"
+        )
 
-    st.plotly_chart(fig, use_container_width=True)
+        st.info(f"**Current IV for {ticker}: {iv_value}%**")
+
+        # Store for later use by other components
+        st.session_state[f"{ticker}_iv"] = iv_value
