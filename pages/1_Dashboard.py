@@ -1756,8 +1756,8 @@ if st.session_state.analysis_run and tickers:
 
 
 
-            with st.expander("📈 STD Expansion (Volatility Pulse)", expanded=False):
-                render_std_component(intraday_df, tkr)
+            # with st.expander("📈 STD Expansion (Volatility Pulse)", expanded=False):
+            #     render_std_component(intraday_df, tkr)
             # build JSON for this ticker if data exists
             if isinstance(intraday_df, pd.DataFrame) and not intraday_df.empty:
                 json_map[tkr] = build_basic_json(intraday_df, tkr, mp_df)
