@@ -85,31 +85,6 @@ def render_std_component(df: pd.DataFrame, ticker: str):
 
     st.divider()
 
-    # --- Histogram of STD_Ratio ---
-    clean_ratio = (
-        df["STD_Ratio"]
-        .replace([np.inf, -np.inf], np.nan)
-        .dropna()
-        if "STD_Ratio" in df.columns
-        else pd.Series(dtype=float)
-    )
-
-    if not clean_ratio.empty:
-        hist_vals, bins = np.histogram(clean_ratio, bins=10)
-
-        hist_df = pd.DataFrame(
-            {
-                "Bin": [f"{bins[i]:.2f} → {bins[i + 1]:.2f}" for i in range(len(hist_vals))],
-                "Count": hist_vals,
-            }
-        )
-
-        st.bar_chart(hist_df, x="Bin", y="Count", height=220)
-    else:
-        st.info("Not enough data to build STD ratio histogram.")
-
-        st.divider()
-
     # --- Normalized STD-Mike line plot (Time in hover via text) ---
     if "STD_Mike" not in df.columns or "Time" not in df.columns:
         st.info("No normalized STD-Mike series available.")
