@@ -124,22 +124,6 @@ def render_std_component(df: pd.DataFrame, ticker: str):
         st.info("Not enough data to plot normalized STD-Mike.")
         return
 
-    # st.markdown("**Normalized STD-Mike (Volatility Path)**")
-    # # Use index as x-axis (time-ordered), values as y
-    # st.line_chart(norm_series, height=200)
     st.markdown("**Normalized STD-Mike (Volatility Path)**")
-
-    # Build a small DataFrame so we can use Time on the x-axis
-    if "Time" in df.columns:
-        plot_df = df[["Time", "STD_Mike"]].copy()
-        plot_df = plot_df.replace([np.inf, -np.inf], np.nan).dropna(subset=["STD_Mike"])
-
-        if plot_df.empty:
-            st.info("Not enough data to plot normalized STD-Mike.")
-            return
-
-        # This will show Time on the x-axis and in the hover tooltip
-        st.line_chart(plot_df, x="Time", y="STD_Mike", height=200)
-    else:
-        # Fallback: no Time column, just plot the series by index
-        st.line_chart(norm_series, height)
+    # Use index as x-axis (time-ordered), values as y
+    st.line_chart(norm_series, height=200)
