@@ -3,6 +3,7 @@
 import pandas as pd
 import numpy as np
 import streamlit as st
+import plotly.graph_objects as go  # ← add this
 
 
 def apply_std_expansion(
@@ -109,36 +110,39 @@ def render_std_component(df: pd.DataFrame, ticker: str):
 
     st.divider()
 
-    # --- Normalized STD-Mike line plot (Time on hover) ---
-    if "STD_Mike" not in df.columns:
+
+    # --- Normalized STD-Mike line plot (Time on hover via Plotly) ---
+    if "STD_Mike" not in df.columns or "Time" not in df.columns:
         st.info("No normalized STD-Mike series available.")
         return
 
-    # Prefer Time on the x-axis so hover shows Time + STD_Mike
-    if "Time" in df.columns:
-        plot_df = df[["Time", "STD_Mike"]].copy()
-        plot_df = plot_df.replace([np.inf, -np.inf], np.nan).dropna(subset=["STD_Mike"])
+    plot_df = df[["Time", "STD_Mike"]].copy()
+    plot_df = plot_df.replace([np.inf, -np.inf], np.nan).dropna(subset=["STD_Mike"])
 
-        if plot_df.empty:
-            st.info("Not enough data to plot normalized STD-Mike.")
-            return
+    if plot_df.empty:
+        st.info("Not enough data to plot normalized STD-Mike.")
+        return
 
-        # Use Time as the index → hover tooltip shows that index (Time)
-        plot_df = plot_df.set_index("Time")
+    st.markdown("**Normalized STD-Mike (Volatility Path)**")
 
-        st.markdown("**Normalized STD-Mike (Volatility Path)**")
-        st.line_chart(plot_df["STD_Mike"], height=200)
-    else:
-        # Fallback: old behavior (index-based)
-        norm_series = (
-            df["STD_Mike"]
-            .replace([np.inf, -np.inf], np.nan)
-            .dropna()
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=plot_df["Time"],
+            y=plot_df["STD_Mike"],
+            mode="lines",
+            name="STD-Mike",
+            hovertemplate=(
+                "Time: %{x}<br>"
+                "STD-Mike: %{y:.2f}"
+                "<extra></extra>"
+            ),
         )
+    )
 
-        if norm_series.empty:
-            st.info("Not enough data to plot normalized STD-Mike.")
-            return
+    fig.update_layout(
+        height=220,
+        margin=dict(l=20, r=20, t=20, b=40),
+    )
 
-        st.markdown("**Normalized STD-Mike (Volatility Path)**")
-        st.line_chart(norm_series, height=200)
+    st.plotly_chart(fig, use_container_width=True)
