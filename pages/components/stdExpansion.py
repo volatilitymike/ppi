@@ -32,11 +32,14 @@ def apply_std_expansion(
     df["STD_Anchor"] = df["F%_STD"].shift(anchor_lookback)
     df["STD_Ratio"] = df["F%_STD"] / df["STD_Anchor"]
 
-    # 3) emoji alerts (double or triple both → 🐦‍🔥)
+    # 3) STD Expansion Levels
     df["STD_Alert"] = ""
-    valid = df["STD_Ratio"].notna()
-    mask_double = valid & (df["STD_Ratio"] >= 2)
+    df["STD_Level"] = np.nan      # numeric magnitude (2x, 3x, …)
 
-    df.loc[mask_double, "STD_Alert"] = "🐦‍🔥"
+    valid = df["STD_Ratio"].notna()
+    exp_mask = valid & (df["STD_Ratio"] >= 2)
+
+    df.loc[exp_mask, "STD_Alert"] = "🐦‍🔥"
+    df.loc[exp_mask, "STD_Level"] = df["STD_Ratio"]
 
     return df
