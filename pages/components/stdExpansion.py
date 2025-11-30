@@ -43,3 +43,38 @@ def apply_std_expansion(
     df.loc[exp_mask, "STD_Level"] = df["STD_Ratio"]
 
     return df
+import streamlit as st
+
+def render_std_component(df, ticker: str):
+    """STD snapshot + histogram block."""
+    if df.empty or "STD_Ratio" not in df.columns:
+        st.info("No STD data available.")
+        return
+
+    st.subheader(f"📊 {ticker} — STD Expansion Overview")
+
+    # --- Snapshot ---
+    last_std = float(df["F%_STD"].iloc[-1])
+    last_anchor = float(df["STD_Anchor"].iloc[-1])
+    last_ratio = float(df["STD_Ratio"].iloc[-1])
+    last_level = df["STD_Level"].iloc[-1]
+    last_alert = df["STD_Alert"].iloc[-1]
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("STD Now", f"{last_std:.2f}")
+    c2.metric("Anchor", f"{last_anchor:.2f}" if not np.isnan(last_anchor) else "—")
+    c3.metric("Ratio", f"{last_ratio:.2f}" if not np.isnan(last_ratio) else "—")
+    c4.metric("Level", f"{last_level:.2f}x" if not np.isnan(last_level) else "—", delta=last_alert)
+
+    st.divider()
+
+    # --- Histogram ---
+    clean = df["STD_Ratio"].replace([np.inf, -np.inf], np.nan).dropna()
+    hist_vals, bins = np.histogram(clean, bins=10)
+
+    hist_df = pd.DataFrame({
+        "Bin": [f"{bins[i]:.2f} → {bins[i+1]:.2f}" for i in range(len(hist_vals))],
+        "Count": hist_vals,
+    })
+
+    st.bar_chart(hist_df, x="Bin", y="Count", height=220)

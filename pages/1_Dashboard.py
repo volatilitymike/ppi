@@ -34,6 +34,7 @@ from pages.components.T2Lightning import apply_T2_lightning
 from pages.components.parallel import apply_parallel_phase
 from pages.components.goldmine import apply_goldmine_e1
 from pages.components.e1EvilEye import apply_e1_kijun_evil_eye
+from pages.components.stdExpansion import render_std_component
 
 from pages.components.midasAnchors import compute_midas_curves
 from pages.components.marketProfile import compute_market_profile
@@ -1687,6 +1688,7 @@ def run_ticker_analysis(
         f'<div class="mike-main-chart" data-ticker="{ticker}" data-session="{session_date_str}">',
         unsafe_allow_html=True,
     )
+    render_std_component(intraday_df, tkr)
 
     fig = build_chart(
         intraday=intraday,
