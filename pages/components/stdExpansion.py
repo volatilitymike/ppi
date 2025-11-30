@@ -100,6 +100,108 @@ def apply_std_expansion(
 #  VISUAL COMPONENT
 # ============================================================
 
+import pandas as pd
+import numpy as np
+import streamlit as st
+import plotly.graph_objects as go
+
+
+# ============================================================
+#  STD EXPANSION + NORMALIZED "VOLATILITY PRICE" (STD-Mike)
+# ============================================================
+
+def apply_std_expansion(
+    df: pd.DataFrame,
+    window: int = 9,
+    anchor_lookback: int = 5,
+) -> pd.DataFrame:
+    """
+    Convert STD movement of Mike into a normalized "volatility price".
+
+    Outputs:
+    - F%_STD         → rolling std of F_numeric
+    - STD_Ratio      → current STD vs anchor STD
+    - STD_Mike       → normalized volatility price: (ratio - 1) * 100
+    - STD_Mike_MA    → Bollinger MA on STD-Mike
+    - STD_Mike_Upper → upper BB
+    - STD_Mike_Lower → lower BB
+    - STD_Mike_BBW   → BBW on STD-Mike (volatility of volatility)
+    - STD_Tenkan     → intraday baseline of volatility
+    - STD_Kijun      → structure line of volatility
+    """
+
+    if df.empty or "F_numeric" not in df.columns:
+        df["F%_STD"] = df["STD_Anchor"] = df["STD_Ratio"] = np.nan
+        df["STD_Alert"] = df["STD_Level"] = np.nan
+        df["STD_Mike"] = df["STD_Mike_MA"] = np.nan
+        df["STD_Mike_Upper"] = df["STD_Mike_Lower"] = np.nan
+        df["STD_Mike_BBW"] = df["STD_Tenkan"] = df["STD_Kijun"] = np.nan
+        return df
+
+    # ------------------------
+    # 1) Rolling std of Mike
+    # ------------------------
+    df["F%_STD"] = df["F_numeric"].rolling(window=window, min_periods=1).std()
+
+    # ------------------------
+    # 2) Anchor & ratio
+    # ------------------------
+    df["STD_Anchor"] = df["F%_STD"].shift(anchor_lookback)
+    df["STD_Ratio"] = df["F%_STD"] / df["STD_Anchor"]
+
+    ratio = df["STD_Ratio"].replace([np.inf, -np.inf], np.nan)
+
+    # ------------------------
+    # 3) Expansion alerts
+    # ------------------------
+    df["STD_Alert"] = ""
+    df["STD_Level"] = np.nan
+
+    exp_mask = ratio >= 2
+    df.loc[exp_mask, "STD_Alert"] = "🐦‍🔥"
+    df.loc[exp_mask, "STD_Level"] = ratio
+
+    # ------------------------
+    # 4) STD-Mike (Volatility Price)
+    # ------------------------
+    df["STD_Mike"] = (ratio - 1) * 100  # normalized so 0 = no expansion
+
+    # ------------------------
+    # 5) Bollinger Bands on STD-Mike
+    # ------------------------
+    std_mike = df["STD_Mike"].replace([np.inf, -np.inf], np.nan)
+
+    df["STD_Mike_MA"] = std_mike.rolling(window=window, min_periods=1).mean()
+    std_dev = std_mike.rolling(window=window, min_periods=1).std()
+
+    df["STD_Mike_Upper"] = df["STD_Mike_MA"] + 2 * std_dev
+    df["STD_Mike_Lower"] = df["STD_Mike_MA"] - 2 * std_dev
+
+    # Bandwidth (volatility OF volatility)
+    df["STD_Mike_BBW"] = (
+        (df["STD_Mike_Upper"] - df["STD_Mike_Lower"]) / df["STD_Mike_MA"]
+    ).replace([np.inf, -np.inf], np.nan)
+
+    # ------------------------
+    # 6) Tenkan / Kijun on STD-Mike
+    # ------------------------
+    df["STD_Tenkan"] = (
+        df["STD_Mike"].rolling(9, min_periods=1).max() +
+        df["STD_Mike"].rolling(9, min_periods=1).min()
+    ) / 2
+
+    df["STD_Kijun"] = (
+        df["STD_Mike"].rolling(26, min_periods=1).max() +
+        df["STD_Mike"].rolling(26, min_periods=1).min()
+    ) / 2
+
+    return df
+
+
+# ============================================================
+#  VISUAL COMPONENT
+# ============================================================
+
 def render_std_component(df: pd.DataFrame, ticker: str):
     """Snapshot + STD-Mike Volatility Chart (BB, Tenkan, Kijun, Hover Time)."""
 
