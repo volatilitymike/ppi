@@ -142,4 +142,4 @@ def render_std_component(df: pd.DataFrame, ticker: str):
         st.line_chart(plot_df, x="Time", y="STD_Mike", height=200)
     else:
         # Fallback: no Time column, just plot the series by index
-        st.line_chart(norm_series, height
+        st.line_chart(norm_series, height)
