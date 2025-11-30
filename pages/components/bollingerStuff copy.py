@@ -315,6 +315,80 @@ def render_std_component(df: pd.DataFrame, ticker: str):
                     hovertemplate="Time: %{x}<br>STD BB MA: %{y:.2f}<extra></extra>",
                 )
             )
+                # --- STD-Mike BBW (volatility-of-vol) ---
+    if "STD_BBW" not in df.columns or "Time" not in df.columns:
+        return
+
+    bbw_df = df[["Time", "STD_BBW", "STD_BBW_Tight_Emoji", "STD_BBW_Alert"]].copy()
+    bbw_df = bbw_df.replace([np.inf, -np.inf], np.nan).dropna(subset=["STD_BBW"])
+
+    if bbw_df.empty:
+        return
+
+    st.markdown("**STD-Mike BBW (Compression / Expansion)**")
+
+    fig_bbw = go.Figure()
+
+    # Main BBW line
+    fig_bbw.add_trace(
+        go.Scatter(
+            x=bbw_df["Time"],
+            y=bbw_df["STD_BBW"],
+            mode="lines",
+            name="STD-Mike BBW",
+            hovertemplate=(
+                "Time: %{x}<br>"
+                "STD-BBW: %{y:.2f}"
+                "<extra></extra>"
+            ),
+        )
+    )
+
+    # 🐝 compression markers (on top of line)
+    tight_mask = bbw_df["STD_BBW_Tight_Emoji"] == "🐝"
+    if tight_mask.any():
+        fig_bbw.add_trace(
+            go.Scatter(
+                x=bbw_df.loc[tight_mask, "Time"],
+                y=bbw_df.loc[tight_mask, "STD_BBW"],
+                mode="text",
+                text=["🐝"] * int(tight_mask.sum()),
+                textposition="top center",
+                name="STD-BBW Tight",
+                hovertemplate=(
+                    "Time: %{x}<br>"
+                    "STD-BBW Tight 🐝"
+                    "<extra></extra>"
+                ),
+            )
+        )
+
+    # 🔥 expansion markers
+    hot_mask = bbw_df["STD_BBW_Alert"] == "🔥"
+    if hot_mask.any():
+        fig_bbw.add_trace(
+            go.Scatter(
+                x=bbw_df.loc[hot_mask, "Time"],
+                y=bbw_df.loc[hot_mask, "STD_BBW"],
+                mode="text",
+                text=["🔥"] * int(hot_mask.sum()),
+                textposition="bottom center",
+                name="STD-BBW Expansion",
+                hovertemplate=(
+                    "Time: %{x}<br>"
+                    "STD-BBW Expansion 🔥"
+                    "<extra></extra>"
+                ),
+            )
+        )
+
+    fig_bbw.update_layout(
+        height=220,
+        margin=dict(l=20, r=20, t=20, b=40),
+    )
+
+    st.plotly_chart(fig_bbw, use_container_width=True)
+
 
     fig.update_layout(
         height=260,
