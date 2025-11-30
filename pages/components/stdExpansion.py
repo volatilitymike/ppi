@@ -109,21 +109,36 @@ def render_std_component(df: pd.DataFrame, ticker: str):
 
     st.divider()
 
-    # --- Normalized STD-Mike line plot ---
+    # --- Normalized STD-Mike line plot (Time on hover) ---
     if "STD_Mike" not in df.columns:
         st.info("No normalized STD-Mike series available.")
         return
 
-    norm_series = (
-        df["STD_Mike"]
-        .replace([np.inf, -np.inf], np.nan)
-        .dropna()
-    )
+    # Prefer Time on the x-axis so hover shows Time + STD_Mike
+    if "Time" in df.columns:
+        plot_df = df[["Time", "STD_Mike"]].copy()
+        plot_df = plot_df.replace([np.inf, -np.inf], np.nan).dropna(subset=["STD_Mike"])
 
-    if norm_series.empty:
-        st.info("Not enough data to plot normalized STD-Mike.")
-        return
+        if plot_df.empty:
+            st.info("Not enough data to plot normalized STD-Mike.")
+            return
 
-    st.markdown("**Normalized STD-Mike (Volatility Path)**")
-    # Use index as x-axis (time-ordered), values as y
-    st.line_chart(norm_series, height=200)
+        # Use Time as the index → hover tooltip shows that index (Time)
+        plot_df = plot_df.set_index("Time")
+
+        st.markdown("**Normalized STD-Mike (Volatility Path)**")
+        st.line_chart(plot_df["STD_Mike"], height=200)
+    else:
+        # Fallback: old behavior (index-based)
+        norm_series = (
+            df["STD_Mike"]
+            .replace([np.inf, -np.inf], np.nan)
+            .dropna()
+        )
+
+        if norm_series.empty:
+            st.info("Not enough data to plot normalized STD-Mike.")
+            return
+
+        st.markdown("**Normalized STD-Mike (Volatility Path)**")
+        st.line_chart(norm_series, height=200)
