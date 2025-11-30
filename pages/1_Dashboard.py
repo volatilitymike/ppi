@@ -1453,7 +1453,7 @@ def build_chart(
 
     fig.update_layout(
         height=600,
-        showlegend=True,
+        showlegend=False,
     )
 
     return fig
