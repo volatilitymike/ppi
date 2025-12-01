@@ -60,13 +60,12 @@ def apply_std_expansion(
 
 
 
-
 def render_std_expander(intraday_df, mike_col="F_numeric"):
     """
     SIMPLE STD LINE ONLY
     - rolling STD of F_numeric (Mike)
     - plot only STD as a clean line
-    - no sigma, no Mike line, no histograms
+    - hover shows Time + STD value
     """
 
     with st.expander("Mike STD (Simple Volatility Line)", expanded=False):
@@ -75,24 +74,47 @@ def render_std_expander(intraday_df, mike_col="F_numeric"):
         window = st.slider(
             "Rolling STD window (bars)",
             5, 60, 20, step=5,
-            key=f"std_window_{mike_col}"
+            key=f"std_window_{mike_col}",
         )
 
         df = intraday_df.copy()
 
-        # Ensure column exists
+        # Ensure Mike column exists
         if mike_col not in df.columns:
             st.warning(f"Column '{mike_col}' not found.")
             return df
 
-        # Compute simple rolling standard deviation
+        # Compute rolling STD
         df["STD_Line"] = df[mike_col].rolling(window).std()
 
-        # Single clean chart
-        st.markdown("### 📉 STD (Volatility Intensity)")
-        st.line_chart(df["STD_Line"])
+        # X-axis: use Time if present, else index
+        if "Time" in df.columns:
+            x_vals = df["Time"]
+        else:
+            x_vals = df.index
 
-        # Mini caption
+        # Build Plotly line with hover
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=x_vals,
+                y=df["STD_Line"],
+                mode="lines",
+                name="Rolling STD",
+                hovertemplate="Time: %{x}<br>STD: %{y:.2f}<extra></extra>",
+            )
+        )
+
+        fig.update_layout(
+            height=320,
+            margin=dict(l=10, r=10, t=40, b=40),
+            xaxis_title="Time",
+            yaxis_title="STD",
+        )
+
+        st.markdown("### 📉 STD (Volatility Intensity)")
+        st.plotly_chart(fig, use_container_width=True)
+
         st.caption("Low → calm · Rising → tension · Spike → chaos · Falling → reset")
 
         return df
