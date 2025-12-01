@@ -61,47 +61,38 @@ def apply_std_expansion(
 
 
 
+def render_std_expander(intraday_df, mike_col="F_numeric"):
+    """
+    SIMPLE STD LINE ONLY
+    - rolling STD of F_numeric (Mike)
+    - plot only STD as a clean line
+    - no sigma, no Mike line, no histograms
+    """
 
-def render_std_expander(intraday_df, mike_col="Mike"):
-    """
-    STD / Sigma lab:
-    - Rolling STD of Mike
-    - Sigma = ΔMike / rolling STD
-    - Simple spike-end detector
-    """
-    with st.expander("Mike STD Engine (Volatility Lab)", expanded=False):
-        # 1) Sensitivity knob (window = how many bars define the environment)
-        window = st.slider("Rolling STD window (bars)", 5, 60, 20, step=5)
+    with st.expander("Mike STD (Simple Volatility Line)", expanded=False):
+
+        # Slider for rolling window
+        window = st.slider(
+            "Rolling STD window (bars)",
+            5, 60, 20, step=5,
+            key=f"std_window_{mike_col}"
+        )
 
         df = intraday_df.copy()
-        df["mike"] = df[mike_col]
-        df["mike_delta"] = df["mike"].diff()
-        df["mike_std"] = df["mike"].rolling(window).std()
-        df["mike_sigma"] = df["mike_delta"] / df["mike_std"]
 
-        # 2) Mike vs STD (trend body vs volatility heartbeat)
-        st.markdown("**Mike vs Rolling STD**")
-        st.line_chart(df[["mike", "mike_std"]])
+        # Ensure column exists
+        if mike_col not in df.columns:
+            st.warning(f"Column '{mike_col}' not found.")
+            return df
 
-        # 3) Sigma histogram (spikes in standard deviations)
-        st.markdown("**Sigma (ΔMike / Rolling STD)**")
-        st.bar_chart(df["mike_sigma"])
+        # Compute simple rolling standard deviation
+        df["STD_Line"] = df[mike_col].rolling(window).std()
 
-        # 4) First-pass “trend ending” spike-collapse marker
-        spike_level = st.select_slider(
-            "Spike threshold (σ) for exhaustion",
-            options=[1.5, 2.0, 2.5, 3.0, 3.5, 4.0],
-            value=3.0,
-        )
+        # Single clean chart
+        st.markdown("### 📉 STD (Volatility Intensity)")
+        st.line_chart(df["STD_Line"])
 
-        df["SpikeEnd"] = (
-            (df["mike_sigma"].abs() < spike_level) &
-            (df["mike_sigma"].shift(1).abs() >= spike_level)
-        )
-
-        # Just to see it working for now; later you can plot emojis/markers on main chart
-        spike_indices = list(df.index[df["SpikeEnd"]])
-        if spike_indices:
-            st.caption(f"Potential volatility exhaustion bars (SpikeEnd): {spike_indices[:15]}")
+        # Mini caption
+        st.caption("Low → calm · Rising → tension · Spike → chaos · Falling → reset")
 
         return df
