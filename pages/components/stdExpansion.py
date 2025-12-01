@@ -60,45 +60,49 @@ def apply_std_expansion(
 
 
 
-def render_std_component(df: pd.DataFrame, ticker: str):
+import numpy as np
+import streamlit as st
+
+def render_std_expander(intraday_df, mike_col="Mike"):
     """
-    Minimal STD panel turned into:
-    - Manual Implied Volatility selector
-    - Numeric input + slider
+    STD / Sigma lab:
+    - Rolling STD of Mike
+    - Sigma = ΔMike / rolling STD
+    - Simple spike-end detector
     """
+    with st.expander("Mike STD Engine (Volatility Lab)", expanded=False):
+        # 1) Sensitivity knob (window = how many bars define the environment)
+        window = st.slider("Rolling STD window (bars)", 5, 60, 20, step=5)
 
-    st.subheader(f"📊 {ticker} — Manual IV Input")
+        df = intraday_df.copy()
+        df["mike"] = df[mike_col]
+        df["mike_delta"] = df["mike"].diff()
+        df["mike_std"] = df["mike"].rolling(window).std()
+        df["mike_sigma"] = df["mike_delta"] / df["mike_std"]
 
-    with st.expander("🎚️ Implied Volatility (Manual Entry)", expanded=False):
+        # 2) Mike vs STD (trend body vs volatility heartbeat)
+        st.markdown("**Mike vs Rolling STD**")
+        st.line_chart(df[["mike", "mike_std"]])
 
-        st.markdown(
-            """
-            Enter the **live IV you see on Robinhood** for this ticker.
-            This value becomes your intraday reference for energy, risk and momentum.
-            """
+        # 3) Sigma histogram (spikes in standard deviations)
+        st.markdown("**Sigma (ΔMike / Rolling STD)**")
+        st.bar_chart(df["mike_sigma"])
+
+        # 4) First-pass “trend ending” spike-collapse marker
+        spike_level = st.select_slider(
+            "Spike threshold (σ) for exhaustion",
+            options=[1.5, 2.0, 2.5, 3.0, 3.5, 4.0],
+            value=3.0,
         )
 
-        # Numeric input + slider (linked)
-        iv_value = st.number_input(
-            "IV (from Robinhood)",
-            min_value=0.0,
-            max_value=300.0,
-            value=30.0,
-            step=1.0,
-            help="Type the exact IV shown in Robinhood (e.g., 28.5, 34, 42).",
-            key=f"iv_input_{ticker}"
+        df["SpikeEnd"] = (
+            (df["mike_sigma"].abs() < spike_level) &
+            (df["mike_sigma"].shift(1).abs() >= spike_level)
         )
 
-        iv_value = st.slider(
-            "Adjust IV",
-            min_value=0.0,
-            max_value=300.0,
-            value=float(iv_value),
-            step=1.0,
-            key=f"iv_slider_{ticker}"
-        )
+        # Just to see it working for now; later you can plot emojis/markers on main chart
+        spike_indices = list(df.index[df["SpikeEnd"]])
+        if spike_indices:
+            st.caption(f"Potential volatility exhaustion bars (SpikeEnd): {spike_indices[:15]}")
 
-        st.info(f"**Current IV for {ticker}: {iv_value}%**")
-
-        # Store for later use by other components
-        st.session_state[f"{ticker}_iv"] = iv_value
+        return df
