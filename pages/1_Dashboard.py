@@ -1756,8 +1756,7 @@ if st.session_state.analysis_run and tickers:
 
 
 
-        with st.expander("📈 STD Engine (Volatility Pulse)", expanded=False):
-            render_std_expander(intraday_df, mike_col="F_numeric")
+
 
             # build JSON for this ticker if data exists
             if isinstance(intraday_df, pd.DataFrame) and not intraday_df.empty:
