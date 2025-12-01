@@ -60,61 +60,61 @@ def apply_std_expansion(
 
 
 
-def render_std_expander(intraday_df, mike_col="F_numeric"):
-    """
-    SIMPLE STD LINE ONLY
-    - rolling STD of F_numeric (Mike)
-    - plot only STD as a clean line
-    - hover shows Time + STD value
-    """
+# def render_std_expander(intraday_df, mike_col="F_numeric"):
+#     """
+#     SIMPLE STD LINE ONLY
+#     - rolling STD of F_numeric (Mike)
+#     - plot only STD as a clean line
+#     - hover shows Time + STD value
+#     """
 
-    with st.expander("Mike STD (Simple Volatility Line)", expanded=False):
+#     with st.expander("Mike STD (Simple Volatility Line)", expanded=False):
 
-        # Slider for rolling window
-        window = st.slider(
-            "Rolling STD window (bars)",
-            5, 60, 20, step=5,
-            key=f"std_window_{mike_col}",
-        )
+#         # Slider for rolling window
+#         window = st.slider(
+#             "Rolling STD window (bars)",
+#             5, 60, 20, step=5,
+#             key=f"std_window_{mike_col}",
+#         )
 
-        df = intraday_df.copy()
+#         df = intraday_df.copy()
 
-        # Ensure Mike column exists
-        if mike_col not in df.columns:
-            st.warning(f"Column '{mike_col}' not found.")
-            return df
+#         # Ensure Mike column exists
+#         if mike_col not in df.columns:
+#             st.warning(f"Column '{mike_col}' not found.")
+#             return df
 
-        # Compute rolling STD
-        df["STD_Line"] = df[mike_col].rolling(window).std()
+#         # Compute rolling STD
+#         df["STD_Line"] = df[mike_col].rolling(window).std()
 
-        # X-axis: use Time if present, else index
-        if "Time" in df.columns:
-            x_vals = df["Time"]
-        else:
-            x_vals = df.index
+#         # X-axis: use Time if present, else index
+#         if "Time" in df.columns:
+#             x_vals = df["Time"]
+#         else:
+#             x_vals = df.index
 
-        # Build Plotly line with hover
-        fig = go.Figure()
-        fig.add_trace(
-            go.Scatter(
-                x=x_vals,
-                y=df["STD_Line"],
-                mode="lines",
-                name="Rolling STD",
-                hovertemplate="Time: %{x}<br>STD: %{y:.2f}<extra></extra>",
-            )
-        )
+#         # Build Plotly line with hover
+#         fig = go.Figure()
+#         fig.add_trace(
+#             go.Scatter(
+#                 x=x_vals,
+#                 y=df["STD_Line"],
+#                 mode="lines",
+#                 name="Rolling STD",
+#                 hovertemplate="Time: %{x}<br>STD: %{y:.2f}<extra></extra>",
+#             )
+#         )
 
-        fig.update_layout(
-            height=320,
-            margin=dict(l=10, r=10, t=40, b=40),
-            xaxis_title="Time",
-            yaxis_title="STD",
-        )
+#         fig.update_layout(
+#             height=320,
+#             margin=dict(l=10, r=10, t=40, b=40),
+#             xaxis_title="Time",
+#             yaxis_title="STD",
+#         )
 
-        st.markdown("### 📉 STD (Volatility Intensity)")
-        st.plotly_chart(fig, use_container_width=True)
+#         st.markdown("### 📉 STD (Volatility Intensity)")
+#         st.plotly_chart(fig, use_container_width=True)
 
-        st.caption("Low → calm · Rising → tension · Spike → chaos · Falling → reset")
+#         st.caption("Low → calm · Rising → tension · Spike → chaos · Falling → reset")
 
-        return df
+#         return df
