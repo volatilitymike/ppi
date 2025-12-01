@@ -34,7 +34,7 @@ from pages.components.T2Lightning import apply_T2_lightning
 from pages.components.parallel import apply_parallel_phase
 from pages.components.goldmine import apply_goldmine_e1
 from pages.components.e1EvilEye import apply_e1_kijun_evil_eye
-from pages.components.stdExpansion import apply_std_expansion, render_std_component
+from pages.components.stdExpansion import apply_std_expansion, render_std_expander
 
 from pages.components.midasAnchors import compute_midas_curves
 from pages.components.marketProfile import compute_market_profile
@@ -1756,8 +1756,9 @@ if st.session_state.analysis_run and tickers:
 
 
 
-            with st.expander("📈 STD Expansion (Volatility Pulse)", expanded=False):
-                render_std_component(intraday_df, tkr)
+        with st.expander("📈 STD Engine (Volatility Pulse)", expanded=False):
+            render_std_expander(intraday_df, mike_col="F_numeric")
+
             # build JSON for this ticker if data exists
             if isinstance(intraday_df, pd.DataFrame) and not intraday_df.empty:
                 json_map[tkr] = build_basic_json(intraday_df, tkr, mp_df)
